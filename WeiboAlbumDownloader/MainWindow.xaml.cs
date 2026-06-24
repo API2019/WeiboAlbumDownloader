@@ -143,6 +143,9 @@ namespace WeiboAlbumDownloader
             {
                 cancellationTokenSource?.Cancel();
                 cancellationTokenSource = new CancellationTokenSource();
+                     // 启动即创建用户文件夹，空账号也会生成目录
+     Directory.CreateDirectory(downloadFolder + userId);
+     Directory.CreateDirectory(downloadFolder + userId + "//" + "微博配图");
 
                 var conv = long.TryParse(userId, out long temp);
                 if (string.IsNullOrEmpty(userId) || !conv)
