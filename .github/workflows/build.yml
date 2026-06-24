@@ -1,0 +1,34 @@
+name: Build WeiboAlbumDownloader
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch: # 允许手动触发构建
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 安装 .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 6.0.x
+
+    - name: 还原依赖包
+      run: dotnet restore WeiboAlbumDownloader/WeiboAlbumDownloader.csproj
+
+    - name: 编译Release版本
+      run: dotnet build WeiboAlbumDownloader/WeiboAlbumDownloader.csproj --configuration Release --no-restore
+
+    - name: 发布程序包
+      run: dotnet publish WeiboAlbumDownloader/WeiboAlbumDownloader.csproj --configuration Release --no-build --output ./publish
+
+    - name: 上传编译产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: WeiboAlbumDownloader
+        path: ./publish
