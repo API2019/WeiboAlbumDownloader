@@ -143,9 +143,6 @@ namespace WeiboAlbumDownloader
             {
                 cancellationTokenSource?.Cancel();
                 cancellationTokenSource = new CancellationTokenSource();
-                     // 启动即创建用户文件夹，空账号也会生成目录
-     Directory.CreateDirectory(downloadFolder + userId);
-     Directory.CreateDirectory(downloadFolder + userId + "//" + "微博配图");
 
                 var conv = long.TryParse(userId, out long temp);
                 if (string.IsNullOrEmpty(userId) || !conv)
@@ -1008,10 +1005,17 @@ namespace WeiboAlbumDownloader
 
                                     page++;
                                 }
-                                else
-                                {
-                                    break;
-                                }
+                               else
+{
+    // 第一页就无数据：账号无公开内容，兜底创建空文件夹
+    if (page == startPage)
+    {
+        Directory.CreateDirectory(downloadFolder + userId);
+        Directory.CreateDirectory(downloadFolder + userId + "//" + "微博配图");
+        AppendLog($"UID {userId} 无公开内容，已创建空文件夹", MessageEnum.Info);
+    }
+    break;
+}
 
                                 //通过加入随机等待避免被限制。爬虫速度过快容易被系统限制(一段时间后限制会自动解除)，加入随机等待模拟人的操作，可降低被系统限制的风险。默认是每爬取1到5页随机等待6到10秒，如果仍然被限，可适当增加sleep时间
                                 Random rd = new Random();
