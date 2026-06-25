@@ -701,17 +701,17 @@ var res = await HttpHelper.GetAsync<WeiboCnMobileModel>(url, dataSource, cookie!
 // 移除末尾 && res?.Data?.Cards?.Count > 0
 if (res != null && res?.Ok == 1 && res?.Data != null && res?.Data?.Cards != null)
 {
-    // 第一页卡片为空=账号半年无内容/私密，创建空文件夹
-    if (res.Data.Cards.Count == 0)
+   // 第一页卡片为null/空数组=账号半年无内容/私密，创建空文件夹
+if (res.Data.Cards == null || res.Data.Cards.Count == 0)
+{
+    if (page == startPage)
     {
-        if (page == startPage)
-        {
-            Directory.CreateDirectory(downloadFolder + userId);
-            Directory.CreateDirectory(downloadFolder + userId + "//" + "微博配图");
-            AppendLog($"UID {userId} 无公开内容，已创建空文件夹", MessageEnum.Info);
-        }
-        break;
+        Directory.CreateDirectory(downloadFolder + userId);
+        Directory.CreateDirectory(downloadFolder + userId + "//" + "微博配图");
+        AppendLog($"UID {userId} 无公开内容，已创建空文件夹", MessageEnum.Info);
     }
+    break;
+}
                                     if (res?.Data?.CardlistInfo?.SinceId != null)
                                         GlobalVar.gSinceId = sinceId = (long)res?.Data?.CardlistInfo?.SinceId!;
                                     AppendLog($"获取到{res?.Data?.CardlistInfo?.Total}条数据，正在下载第{page}页，SinceId: {sinceId}", MessageEnum.Info);
