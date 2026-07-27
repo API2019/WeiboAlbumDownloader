@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using WeiboAlbumDownloader.Enums;
@@ -15,6 +16,27 @@ namespace WeiboAlbumDownloader.Helpers
 {
     public class HttpHelper
     {
+        private static readonly string[] ProxyUrls =
+        {
+            // 在这里硬编码代理地址，例如：
+            // "http://127.0.0.1:7890",
+            // "http://123.123.123.123:8080"
+        };
+
+        private static int _proxyIndex = -1;
+
+        private static string? GetNextProxyUrl()
+        {
+            if (ProxyUrls.Length == 0)
+            {
+                return null;
+            }
+
+            int current = Interlocked.Increment(ref _proxyIndex);
+            int index = (int)((uint)current % (uint)ProxyUrls.Length);
+            return ProxyUrls[index];
+        }
+
         static HttpClient client;
         /// <summary>
         /// 
@@ -31,10 +53,25 @@ namespace WeiboAlbumDownloader.Helpers
                 //logAction?.Invoke($"[Request URL]: {url}", MessageEnum.Info);
                 //logAction?.Invoke($"[Request Cookie]: {cookie}", MessageEnum.Info);
 
+                string? proxyUrl = GetNextProxyUrl();
+
                 var handler = new HttpClientHandler()
                 {
-                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                    AutomaticDecompression =
+                        DecompressionMethods.GZip |
+                        DecompressionMethods.Deflate
                 };
+
+                if (!string.IsNullOrWhiteSpace(proxyUrl))
+                {
+                    handler.UseProxy = true;
+                    handler.Proxy = new WebProxy(proxyUrl);
+
+                    logAction?.Invoke(
+                        $"[使用代理]: {proxyUrl}",
+                        MessageEnum.Info);
+                }
+
                 client = new HttpClient(handler);
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Add("Referer", "https://m.weibo.cn/");
