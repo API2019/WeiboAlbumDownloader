@@ -207,10 +207,13 @@ namespace WeiboAlbumDownloader
                         long sinceId = startSinceId;
                         countDownloadedSkipToNextUser = 0;
                         isSkip = false;
-                        AppendLog("开始下载" + userId, MessageEnum.Info);
+                       AppendLog("开始下载" + userId, MessageEnum.Info);
 
-                        //源是weibo.com的时候，获取的是获取相册列表，json格式
-                        if (dataSource == WeiboDataSource.WeiboCom1)
+// 新增：提前创建用户根文件夹，无数据/半年可见无内容时也保证目录存在
+Directory.CreateDirectory(Path.Combine(downloadFolder, userId));
+
+//源是weibo.com的时候，获取的是获取相册列表，json格式
+if (dataSource == WeiboDataSource.WeiboCom1)
                         {
                             string albumsUrl = $"https://photo.weibo.com/albums/get_all?uid={userId}&page=1";
                             TextBlock_UID?.Dispatcher.InvokeAsync(() =>
@@ -717,16 +720,20 @@ namespace WeiboAlbumDownloader
                             }
                         }
                         //通过m.weibo.cn移动端api获取
-                        else if (dataSource == WeiboDataSource.WeiboCnMobile)
-                        {
-                            //https://m.weibo.cn/api/container/getIndex?type=uid&value=10000000000&containerid=10760310000000000&since_id=5040866311798795
-                            sinceId = startSinceId;
-                            bool cachedUserInfo = false;
-                            string personalFolder = userId;
-                            page = startPage;
+else if (dataSource == WeiboDataSource.WeiboCnMobile)
+{
+    //https://m.weibo.cn/api/container/getIndex?type=uid&value=10000000000&containerid=10760310000000000&since_id=5040866311798795
+    sinceId = startSinceId;
+    bool cachedUserInfo = false;
+    string personalFolder = userId;
+    page = startPage;
 
-                            while (true)
-                            {
+    // 新增：先创建UID命名的兜底文件夹，无数据时也保留目录
+    string userRootPath = Path.Combine(downloadFolder, personalFolder);
+    Directory.CreateDirectory(userRootPath);
+
+    while (true)
+    {
                                 if (isSkip)
                                     break;
 
@@ -741,13 +748,23 @@ namespace WeiboAlbumDownloader
                                     if (res?.Data?.Cards?[res.Data.Cards.Count - 1]?.Mblog?.User?.ScreenName == null)
                                         return;
 
-                                    //获取用户资料
-                                    if (!cachedUserInfo)
-                                    {
-                                        nickName = res?.Data?.Cards?[res.Data.Cards.Count - 1]?.Mblog?.User?.ScreenName!;
-                                        personalFolder = $"{nickName}({userId})";
-                                        Directory.CreateDirectory(downloadFolder + "//" + personalFolder);
-                                        using (File.Create(downloadFolder + "//" + personalFolder + "//" + nickName)) { }
+//获取用户资料
+if (!cachedUserInfo)
+{
+    nickName = res?.Data?.Cards?[res.Data.Cards.Count - 1]?.Mblog?.User?.ScreenName!;
+    string newFolderName = $"{nickName}({userId})";
+    string newFolderPath = Path.Combine(downloadFolder, newFolderName);
+
+    // 新增：如果UID兜底文件夹存在、新名称文件夹不存在，就重命名
+    if (Directory.Exists(userRootPath) && !Directory.Exists(newFolderPath))
+    {
+        Directory.Move(userRootPath, newFolderPath);
+    }
+    // 确保文件夹存在
+    Directory.CreateDirectory(newFolderPath);
+    personalFolder = newFolderName;
+
+    using (File.Create(Path.Combine(downloadFolder, personalFolder, nickName))) { }
 
                                         headUrl = "https://tvax2.sinaimg.cn/large/" + Path.GetFileName(res?.Data?.Cards?[res.Data.Cards.Count - 1]?.Mblog?.User?.AvatarHd!).Split("?")[0];
                                         var fileName = downloadFolder + "//" + personalFolder + "//" + Path.GetFileName(headUrl);
